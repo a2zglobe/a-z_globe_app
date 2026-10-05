@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Button, StarRow, Text } from '@core/ui';
 import { Sheet } from '@core/ui/Sheet';
 import { colors, radius, spacing, typography } from '@core/theme';
@@ -23,31 +23,47 @@ export function WriteReviewSheet({
   visible: boolean;
   merchantName: string;
   onClose: () => void;
-  onSubmit: (rating: number, text: string) => void;
+  /**
+   * Saves the review. The sheet stays open (with a spinner) until it settles,
+   * and closes only on success — a rejected promise keeps what was typed.
+   */
+  onSubmit: (rating: number, text: string) => Promise<void> | void;
 }) {
   const [rating, setRating] = useState(0);
   const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const close = () => {
+    if (saving) return;
+    setRating(0);
+    setText('');
+    onClose();
+  };
+
+  const submit = async () => {
+    setSaving(true);
+    try {
+      await onSubmit(rating, text.trim());
+    } catch {
+      // The caller reports the error; keep the draft so nothing is lost.
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
     setRating(0);
     setText('');
     onClose();
   };
 
   return (
-    <Sheet visible={visible} onClose={close}>
-      <View style={styles.body}>
-        <Text variant="h2" color={colors.textHeading}>
-          Write a Review
-        </Text>
+    <Sheet visible={visible} onClose={close} title="Write a Review">
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <Text variant="bodyRegular" color={colors.textSecondary} style={styles.subtitle}>
           Share your experience at {merchantName}
         </Text>
 
-        <Text variant="body" color={colors.palette.gray700} style={styles.label}>
-          Your Rating
-        </Text>
         <View style={styles.stars}>
+          <Text variant="labelLg" color={colors.textHeading}>Your Rating</Text>
           <StarRow rating={rating} size={32} gap={spacing[3]} onRate={setRating} />
         </View>
 
@@ -55,6 +71,7 @@ export function WriteReviewSheet({
           Your Review
         </Text>
         <TextInput
+          accessibilityLabel="Your review"
           style={styles.textarea}
           placeholder="Tell others about your experience — food quality, delivery time, packaging…"
           placeholderTextColor={colors.textMuted}
@@ -62,29 +79,23 @@ export function WriteReviewSheet({
           onChangeText={(next) => setText(next.slice(0, MAX_LENGTH))}
           multiline
           textAlignVertical="top"
+          editable={!saving}
         />
         <Text variant="bodySm" color={colors.textMuted} align="right" style={styles.counter}>
           {text.length}/{MAX_LENGTH}
         </Text>
 
-        <Button
-          label="Submit Review"
-          disabled={rating === 0}
-          onPress={() => {
-            onSubmit(rating, text.trim());
-            close();
-          }}
-        />
-      </View>
+        <Button label="Submit Review" disabled={rating === 0} loading={saving} onPress={submit} />
+      </ScrollView>
     </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  body: { paddingHorizontal: spacing[8], paddingTop: spacing[8] },
+  body: { paddingHorizontal: spacing[6], paddingTop: spacing[4], paddingBottom: spacing[2] },
   subtitle: { paddingTop: spacing[1.5] },
   label: { fontFamily: 'Urbanist_600SemiBold', paddingTop: spacing[8] },
-  stars: { paddingTop: spacing[3.5] },
+  stars: { marginTop: spacing[6], padding: spacing[5], gap: spacing[3], alignItems: 'center', borderRadius: radius.xl, backgroundColor: colors.surfaceSunken, borderWidth: 1, borderColor: colors.border },
   textarea: {
     ...typography.body,
     color: colors.text,

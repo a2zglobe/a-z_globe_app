@@ -1,7 +1,7 @@
-import type { ComponentType } from 'react';
+import type { ComponentProps, ComponentType } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { SvgProps } from 'react-native-svg';
+import type Svg from 'react-native-svg';
 import { colors, fontFamily, gradients, radius } from '@core/theme';
 import { Text } from '@core/ui';
 import Burger from '../../../../assets/icons/offers/burger.svg';
@@ -24,7 +24,7 @@ import type { OfferLook } from '../types';
  *            right · kicker 600 9/13 ls1 white 70% · headline 800 16/20 white
  *            (left block pad-left 18, clear of the art) · discount pill top
  *            right: white 20% r8 pad 3/8, 800 12/18 · 95pt illustration at 92%
- *   compact  72h · r10 · kicker 600 7/10 · headline 800 10/12.5 · 60pt art ·
+ *   compact  72h · r10 · kicker 600 7/10 · headline 800 10/12.5 ≤116w · 60pt art ·
  *            no pill — the Offers & Discounts list thumbnail (352:6239)
  */
 
@@ -40,7 +40,7 @@ export const OFFER_BACKGROUNDS = {
 } as const;
 export type OfferBackground = keyof typeof OFFER_BACKGROUNDS;
 
-export const OFFER_ILLUSTRATIONS: Record<string, { label: string; Art: ComponentType<SvgProps> }> = {
+export const OFFER_ILLUSTRATIONS: Record<string, { label: string; Art: ComponentType<ComponentProps<typeof Svg>> }> = {
   burger: { label: 'Burger', Art: Burger },
   pizza: { label: 'Pizza', Art: Pizza },
   coffee: { label: 'Coffee', Art: Coffee },
@@ -66,11 +66,14 @@ const END = { x: 0.74, y: 0.94 };
 export function OfferCard({
   look,
   headline,
+  subtitle,
   badge,
   size = 'large',
 }: {
   look: OfferLook;
   headline: string;
+  /** Separate validity line below the offer headline. */
+  subtitle?: string;
   /** "20% OFF" pill, top right. Large cards only. */
   badge?: string;
   size?: 'large' | 'compact';
@@ -100,6 +103,7 @@ export function OfferCard({
         <Text style={large ? styles.headlineL : styles.headlineS} numberOfLines={large ? 3 : 2}>
           {headline}
         </Text>
+        {subtitle ? <Text style={large ? styles.subtitleL : styles.subtitleS}>{subtitle}</Text> : null}
       </View>
 
       {large && badge ? (
@@ -146,7 +150,11 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   headlineL: { fontFamily: fontFamily[800], fontSize: 16, lineHeight: 20, color: WHITE },
-  headlineS: { fontFamily: fontFamily[800], fontSize: 10, lineHeight: 12.5, color: WHITE },
+  subtitleL: { fontFamily: fontFamily[500], fontSize: 14, lineHeight: 20, color: WHITE, marginTop: 6 },
+  subtitleS: { fontFamily: fontFamily[500], fontSize: 10, lineHeight: 14, color: WHITE, marginTop: 2 },
+  // Figma hand-sizes each thumbnail's text box (85 and 116 wide on 352:6743);
+  // 116 is the widest, so longer headlines wrap as drawn instead of running on.
+  headlineS: { fontFamily: fontFamily[800], fontSize: 10, lineHeight: 12.5, color: WHITE, maxWidth: 116 },
   badge: {
     position: 'absolute',
     right: 16,
